@@ -1,118 +1,87 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import {SafeAreaView, ScrollView, StyleSheet, useWindowDimensions, View} from 'react-native';
+import { useRef, useState} from 'react';
+import SoundPlayer, {SoundPlayerRef} from './components/SoundPlayer.tsx';
+import {playerLogic, PhraseInterface} from './logic/playerLogic.ts';
+import { Phrase } from './components/Phrase.tsx';
+import {COLORS} from './logic/constants.ts';
+import {LinearGradient} from 'expo-linear-gradient';
+import {SafeAreaProvider, useSafeAreaInsets} from 'react-native-safe-area-context';
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
-
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
-
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
-
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
+function App() {
+  const {top, bottom} = useSafeAreaInsets();
+  const soundPlayerRef = useRef<SoundPlayerRef>(null);
+  const {height, width} = useWindowDimensions();
+  const [selectedPhrase, setSelectedPhrase] = useState<PhraseInterface>();
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container}>
+        <View style={{ backgroundColor: COLORS.secondaryLight, width: '100%', height: height * 0.03, borderBottomWidth: 1, borderColor: COLORS.secondary }} />
+
+        <LinearGradient
+          colors={['rgba(194,195,203,0.32)', 'transparent']}
           style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+            position: 'absolute',
+            right: 0,
+            top: top + height * 0.03,
+            height: height * 0.07,
+            width,
+            zIndex: 999,
+          }}
+        />
+
+
+        <LinearGradient
+          colors={['transparent', 'rgba(194,195,203,0.24)']}
+          style={{
+            position: 'absolute',
+            right: 0,
+            bottom: bottom + 100,
+            height: height * 0.07,
+            width,
+            zIndex: 999,
+          }}
+        />
+
+        <ScrollView style={styles.scrollContainer}>
+          {playerLogic.phrases.map((phrase, index) => {
+            const isSelected = selectedPhrase && playerLogic.comparePhrase(phrase, selectedPhrase);
+            return (
+              <Phrase
+                key={index}
+                isSelected={isSelected}
+                onPress={() => {
+                  setSelectedPhrase(phrase); // Set the selected phrase
+                  if (soundPlayerRef.current) {
+                    soundPlayerRef.current.play(phrase.startTime); // Play from the phrase start time
+                  }
+                }}
+                {...phrase}
+              />
+            );
+          })}
+        </ScrollView>
+
+        <SoundPlayer
+          ref={soundPlayerRef}
+          onFinish={() => {
+            setSelectedPhrase(undefined); // Clear the selected phrase
+          }}
+          onChange={(positionMillis) => {
+            const currentPhrase = playerLogic.phrases[playerLogic.findIntervalIndex(positionMillis)];
+            if (currentPhrase && (!selectedPhrase || !playerLogic.comparePhrase(currentPhrase, selectedPhrase))) {
+              setSelectedPhrase(currentPhrase);
+            }
+          }}
+        />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
+  container: { flex: 1, backgroundColor: COLORS.secondaryLight },
+  scrollContainer: { flex: 1, paddingHorizontal: 16, backgroundColor: '#fafafa' },
 });
 
 export default App;
